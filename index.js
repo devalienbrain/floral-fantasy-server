@@ -1,7 +1,7 @@
-require('dotenv').config();
-const express = require('express');
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const cors = require('cors');
+require("dotenv").config();
+const express = require("express");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const cors = require("cors");
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -20,45 +20,68 @@ const client = new MongoClient(uri, {
 const run = async () => {
   try {
     await client.connect();
-    const db = client.db('fatihas-floral-fantasy');
-    const productCollection = db.collection('products');
-    const categoryCollection = db.collection('categories');
+    const db = client.db("fatihas-floral-fantasy");
+    const productCollection = db.collection("products");
+    const categoryCollection = db.collection("categories");
 
-    // Get all products with optional filtering, pagination, and sorting
-    app.get('/products', async (req, res) => {
-      const { category, search, page = 1, limit = 10, sortBy = 'name', sortOrder = 'asc' } = req.query;
-      const query = {};
-      
-      if (category) query.category = category;
-      if (search) query.title = { $regex: search, $options: 'i' };
+   // Get all products with optional filtering, pagination, and sorting
+app.get("/products", async (req, res) => {
+  const {
+    category,
+    search,
+    page = 1,
+    limit = 10,
+    sortBy = "name",
+    sortOrder = "asc",
+  } = req.query;
+  const query = {};
 
-      const options = {
-        skip: (page - 1) * limit,
-        limit: parseInt(limit),
-        sort: { [sortBy]: sortOrder === 'asc' ? 1 : -1 },
-      };
+  if (category) query.category = category;
+  if (search) query.title = { $regex: search, $options: "i" };
 
-      const cursor = productCollection.find(query, options);
-      const products = await cursor.toArray();
-      res.send({ status: true, data: products });
-    });
+  const totalProducts = await productCollection.countDocuments(query);
+
+  const options = {
+    skip: (page - 1) * limit,
+    limit: parseInt(limit),
+    sort: { [sortBy]: sortOrder === "asc" ? 1 : -1 },
+  };
+
+  const cursor = productCollection.find(query, options);
+  const products = await cursor.toArray();
+
+  const totalPages = Math.ceil(totalProducts / limit);
+
+  res.send({
+    status: true,
+    data: products,
+    pagination: {
+      totalProducts,
+      totalPages,
+      currentPage: parseInt(page),
+      pageSize: parseInt(limit),
+    },
+  });
+});
+
 
     // Get a single product by ID
-    app.get('/products/:id', async (req, res) => {
+    app.get("/products/:id", async (req, res) => {
       const id = req.params.id;
       const product = await productCollection.findOne({ _id: ObjectId(id) });
       res.send({ status: true, data: product });
     });
 
     // Add a new product
-    app.post('/products', async (req, res) => {
+    app.post("/products", async (req, res) => {
       const product = req.body;
+      console.log(product);
       const result = await productCollection.insertOne(product);
       res.send(result);
     });
 
     // Update a product by ID
-    app.put('/products/:id', async (req, res) => {
+    app.put("/products/:id", async (req, res) => {
       const id = req.params.id;
       const product = req.body;
       const filter = { _id: ObjectId(id) };
@@ -68,28 +91,28 @@ const run = async () => {
     });
 
     // Delete a product by ID
-    app.delete('/products/:id', async (req, res) => {
+    app.delete("/products/:id", async (req, res) => {
       const id = req.params.id;
       const result = await productCollection.deleteOne({ _id: ObjectId(id) });
       res.send(result);
     });
 
     // Get all categories
-    app.get('/categories', async (req, res) => {
+    app.get("/categories", async (req, res) => {
       const cursor = categoryCollection.find({});
       const categories = await cursor.toArray();
       res.send({ status: true, data: categories });
     });
 
     // Add a new category
-    app.post('/categories', async (req, res) => {
+    app.post("/categories", async (req, res) => {
       const category = req.body;
       const result = await categoryCollection.insertOne(category);
       res.send(result);
     });
 
     // Update a category by ID
-    app.put('/categories/:id', async (req, res) => {
+    app.put("/categories/:id", async (req, res) => {
       const id = req.params.id;
       const category = req.body;
       const filter = { _id: ObjectId(id) };
@@ -99,12 +122,11 @@ const run = async () => {
     });
 
     // Delete a category by ID
-    app.delete('/categories/:id', async (req, res) => {
+    app.delete("/categories/:id", async (req, res) => {
       const id = req.params.id;
       const result = await categoryCollection.deleteOne({ _id: ObjectId(id) });
       res.send(result);
     });
-
   } finally {
     // Do nothing here, or close the connection if needed
   }
@@ -112,10 +134,12 @@ const run = async () => {
 
 run().catch((err) => console.log(err));
 
-app.get('/', (req, res) => {
-  res.send('Hello From Fatihas Floral Fantasy - Online Nursery Website Server');
+app.get("/", (req, res) => {
+  res.send("Hello From Fatihas Floral Fantasy - Online Nursery Website Server");
 });
 
 app.listen(port, () => {
-  console.log(`Fatihas Floral Fantasy - Online Nursery Website Server listening on port ${port}`);
+  console.log(
+    `Fatihas Floral Fantasy - Online Nursery Website Server listening on port ${port}`
+  );
 });
