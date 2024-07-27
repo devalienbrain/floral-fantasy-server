@@ -25,47 +25,46 @@ const run = async () => {
     const categoryCollection = db.collection("categories");
 
     // Get all products with optional filtering, pagination, and sorting
-app.get("/products", async (req, res) => {
-  const {
-    category,
-    search,
-    page = 1,
-    limit = 10,
-    sortBy = "name",
-    sortOrder = "asc",
-    addedToCart
-  } = req.query;
-  const query = {};
+    app.get("/products", async (req, res) => {
+      const {
+        category,
+        search,
+        page = 1,
+        limit = 10,
+        sortBy = "name",
+        sortOrder = "asc",
+        addedToCart,
+      } = req.query;
+      const query = {};
 
-  if (category) query.category = category;
-  if (search) query.title = { $regex: search, $options: "i" };
-  if (addedToCart !== undefined) query.addedToCart = addedToCart === 'true';
+      if (category) query.category = category;
+      if (search) query.title = { $regex: search, $options: "i" };
+      if (addedToCart !== undefined) query.addedToCart = addedToCart === "true";
 
-  const totalProducts = await productCollection.countDocuments(query);
+      const totalProducts = await productCollection.countDocuments(query);
 
-  const options = {
-    skip: (page - 1) * limit,
-    limit: parseInt(limit),
-    sort: { [sortBy]: sortOrder === "asc" ? 1 : -1 },
-  };
+      const options = {
+        skip: (page - 1) * limit,
+        limit: parseInt(limit),
+        sort: { [sortBy]: sortOrder === "asc" ? 1 : -1 },
+      };
 
-  const cursor = productCollection.find(query, options);
-  const products = await cursor.toArray();
+      const cursor = productCollection.find(query, options);
+      const products = await cursor.toArray();
 
-  const totalPages = Math.ceil(totalProducts / limit);
+      const totalPages = Math.ceil(totalProducts / limit);
 
-  res.send({
-    status: true,
-    data: products,
-    pagination: {
-      totalProducts,
-      totalPages,
-      currentPage: parseInt(page),
-      pageSize: parseInt(limit),
-    },
-  });
-});
-
+      res.send({
+        status: true,
+        data: products,
+        pagination: {
+          totalProducts,
+          totalPages,
+          currentPage: parseInt(page),
+          pageSize: parseInt(limit),
+        },
+      });
+    });
 
     // Get a single product by ID
     app.get("/products/:id", async (req, res) => {
@@ -82,16 +81,7 @@ app.get("/products", async (req, res) => {
       res.send(result);
     });
 
-    // Update a product by ID
-    // app.put("/products/:id", async (req, res) => {
-    //   const id = req.params.id;
-    //   const product = req.body;
-    //   const filter = { _id: ObjectId(id) };
-    //   const updateDoc = { $set: product };
-    //   const result = await productCollection.updateOne(filter, updateDoc);
-    //   res.send(result);
-    // });
-
+    //  Update a product by Id
     app.put("/products/:id", async (req, res) => {
       const id = req.params.id;
       const product = req.body;
@@ -110,17 +100,33 @@ app.get("/products", async (req, res) => {
       }
     });
 
-    // Delete a product by ID
+    // Delete a product by Id
     app.delete("/products/:id", async (req, res) => {
       const id = req.params.id;
       const result = await productCollection.deleteOne({ _id: ObjectId(id) });
       res.send(result);
     });
 
-    // Get all categories
+    // Get all categories with product count
     app.get("/categories", async (req, res) => {
-      const cursor = categoryCollection.find({});
-      const categories = await cursor.toArray();
+      const categories = await categoryCollection
+        .aggregate([
+          {
+            $lookup: {
+              from: "products",
+              localField: "name",
+              foreignField: "category",
+              as: "products",
+            },
+          },
+          {
+            $project: {
+              name: 1,
+              totalProducts: { $size: "$products" },
+            },
+          },
+        ])
+        .toArray();
       res.send({ status: true, data: categories });
     });
 
