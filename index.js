@@ -24,7 +24,7 @@ const run = async () => {
     const productCollection = db.collection("products");
     const categoryCollection = db.collection("categories");
 
-   // Get all products with optional filtering, pagination, and sorting
+    // Get all products with optional filtering, pagination, and sorting
 app.get("/products", async (req, res) => {
   const {
     category,
@@ -33,11 +33,13 @@ app.get("/products", async (req, res) => {
     limit = 10,
     sortBy = "name",
     sortOrder = "asc",
+    addedToCart
   } = req.query;
   const query = {};
 
   if (category) query.category = category;
   if (search) query.title = { $regex: search, $options: "i" };
+  if (addedToCart !== undefined) query.addedToCart = addedToCart === 'true';
 
   const totalProducts = await productCollection.countDocuments(query);
 
@@ -93,21 +95,20 @@ app.get("/products", async (req, res) => {
     app.put("/products/:id", async (req, res) => {
       const id = req.params.id;
       const product = req.body;
-    
+
       // Exclude the _id field from the update document
       const { _id, ...updateData } = product;
-      
+
       const filter = { _id: ObjectId(id) };
       const updateDoc = { $set: updateData };
-    
+
       try {
         const result = await productCollection.updateOne(filter, updateDoc);
         res.send(result);
       } catch (error) {
-        res.status(500).send({ error: 'Failed to update product' });
+        res.status(500).send({ error: "Failed to update product" });
       }
     });
-    
 
     // Delete a product by ID
     app.delete("/products/:id", async (req, res) => {
