@@ -81,14 +81,33 @@ app.get("/products", async (req, res) => {
     });
 
     // Update a product by ID
+    // app.put("/products/:id", async (req, res) => {
+    //   const id = req.params.id;
+    //   const product = req.body;
+    //   const filter = { _id: ObjectId(id) };
+    //   const updateDoc = { $set: product };
+    //   const result = await productCollection.updateOne(filter, updateDoc);
+    //   res.send(result);
+    // });
+
     app.put("/products/:id", async (req, res) => {
       const id = req.params.id;
       const product = req.body;
+    
+      // Exclude the _id field from the update document
+      const { _id, ...updateData } = product;
+      
       const filter = { _id: ObjectId(id) };
-      const updateDoc = { $set: product };
-      const result = await productCollection.updateOne(filter, updateDoc);
-      res.send(result);
+      const updateDoc = { $set: updateData };
+    
+      try {
+        const result = await productCollection.updateOne(filter, updateDoc);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ error: 'Failed to update product' });
+      }
     });
+    
 
     // Delete a product by ID
     app.delete("/products/:id", async (req, res) => {
