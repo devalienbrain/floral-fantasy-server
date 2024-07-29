@@ -205,7 +205,7 @@ const run = async () => {
     // Routes for payments
     app.post("/create-payment-intent", async (req, res) => {
       const { amount } = req.body;
-      console.log(amount);
+      // console.log(amount);
       try {
         const paymentIntent = await stripe.paymentIntents.create({
           amount: amount * 100, // amount in cents
@@ -222,7 +222,7 @@ const run = async () => {
 
     app.post("/save-payment-info", async (req, res) => {
       const paymentInfo = req.body;
-      console.log(paymentInfo);
+      // console.log(paymentInfo);
       try {
         const result = await paymentCollection.insertOne(paymentInfo);
         res.send(result);
@@ -260,6 +260,17 @@ const run = async () => {
       } catch (error) {
         console.error("Failed to fetch payment history", error); // Log errors
         res.status(500).send({ error: "Failed to fetch payment history" });
+      }
+    });
+
+    app.post("/clear-cart", async (req, res) => {
+      try {
+        // Logic to clear all cart items
+        await productCollection.updateMany({}, { $set: { addedToCart: false } }); 
+        res.status(200).json({ message: "Cart cleared successfully" });
+      } catch (error) {
+        console.error("Error clearing cart:", error);
+        res.status(500).json({ error: "Failed to clear cart" });
       }
     });
   } catch (error) {
