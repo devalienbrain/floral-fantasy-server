@@ -29,11 +29,7 @@ const run = async () => {
     const categoryCollection = db.collection("categories");
     const paymentCollection = db.collection("payments");
 
-
-    // Routes for products, categories and payment
-
-    // Payment part
-    // Get all products with optional filtering, pagination, and sorting
+    // Routes for products
     app.get("/products", async (req, res) => {
       const {
         category,
@@ -50,124 +46,161 @@ const run = async () => {
       if (search) query.title = { $regex: search, $options: "i" };
       if (addedToCart !== undefined) query.addedToCart = addedToCart === "true";
 
-      const totalProducts = await productCollection.countDocuments(query);
+      try {
+        const totalProducts = await productCollection.countDocuments(query);
 
-      const options = {
-        skip: (page - 1) * limit,
-        limit: parseInt(limit),
-        sort: { [sortBy]: sortOrder === "asc" ? 1 : -1 },
-      };
+        const options = {
+          skip: (page - 1) * limit,
+          limit: parseInt(limit),
+          sort: { [sortBy]: sortOrder === "asc" ? 1 : -1 },
+        };
 
-      const cursor = productCollection.find(query, options);
-      const products = await cursor.toArray();
+        const products = await productCollection.find(query, options).toArray();
+        const totalPages = Math.ceil(totalProducts / limit);
 
-      const totalPages = Math.ceil(totalProducts / limit);
-
-      res.send({
-        status: true,
-        data: products,
-        pagination: {
-          totalProducts,
-          totalPages,
-          currentPage: parseInt(page),
-          pageSize: parseInt(limit),
-        },
-      });
+        res.send({
+          status: true,
+          data: products,
+          pagination: {
+            totalProducts,
+            totalPages,
+            currentPage: parseInt(page),
+            pageSize: parseInt(limit),
+          },
+        });
+      } catch (error) {
+        res.status(500).send({ error: "Failed to fetch products" });
+      }
     });
 
-    // Get a single product by ID
     app.get("/products/:id", async (req, res) => {
       const id = req.params.id;
-      const product = await productCollection.findOne({ _id: ObjectId(id) });
-      res.send({ status: true, data: product });
+      try {
+        const product = await productCollection.findOne({ _id: ObjectId(id) });
+        if (product) {
+          res.send({ status: true, data: product });
+        } else {
+          res.status(404).send({ error: "Product not found" });
+        }
+      } catch (error) {
+        res.status(500).send({ error: "Failed to fetch product" });
+      }
     });
 
-    // Add a new product
     app.post("/products", async (req, res) => {
       const product = req.body;
-      console.log(product);
-      const result = await productCollection.insertOne(product);
-      res.send(result);
+      try {
+        const result = await productCollection.insertOne(product);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ error: "Failed to add product" });
+      }
     });
 
-    // Update a product by Id
     app.put("/products/:id", async (req, res) => {
       const id = req.params.id;
       const product = req.body;
 
-      // Exclude the _id field from the update document
       const { _id, ...updateData } = product;
-
       const filter = { _id: ObjectId(id) };
       const updateDoc = { $set: updateData };
 
       try {
         const result = await productCollection.updateOne(filter, updateDoc);
-        res.send(result);
+        if (result.modifiedCount > 0) {
+          res.send(result);
+        } else {
+          res.status(404).send({ error: "Product not found" });
+        }
       } catch (error) {
         res.status(500).send({ error: "Failed to update product" });
       }
     });
 
-    // Delete a product by Id
     app.delete("/products/:id", async (req, res) => {
       const id = req.params.id;
-      const result = await productCollection.deleteOne({ _id: ObjectId(id) });
-      res.send(result);
+      try {
+        const result = await productCollection.deleteOne({ _id: ObjectId(id) });
+        if (result.deletedCount > 0) {
+          res.send(result);
+        } else {
+          res.status(404).send({ error: "Product not found" });
+        }
+      } catch (error) {
+        res.status(500).send({ error: "Failed to delete product" });
+      }
     });
 
-    // Category part
-
-    // Get all categories with product count
+    // Routes for categories
     app.get("/categories", async (req, res) => {
-      const categories = await categoryCollection
-        .aggregate([
-          {
-            $lookup: {
-              from: "products",
-              localField: "name",
-              foreignField: "category",
-              as: "products",
+      try {
+        const categories = await categoryCollection
+          .aggregate([
+            {
+              $lookup: {
+                from: "products",
+                localField: "name",
+                foreignField: "category",
+                as: "products",
+              },
             },
-          },
-          {
-            $project: {
-              name: 1,
-              totalProducts: { $size: "$products" },
+            {
+              $project: {
+                name: 1,
+                totalProducts: { $size: "$products" },
+              },
             },
-          },
-        ])
-        .toArray();
-      res.send({ status: true, data: categories });
+          ])
+          .toArray();
+        res.send({ status: true, data: categories });
+      } catch (error) {
+        res.status(500).send({ error: "Failed to fetch categories" });
+      }
     });
 
-    // Add a new category
     app.post("/categories", async (req, res) => {
       const category = req.body;
-      const result = await categoryCollection.insertOne(category);
-      res.send(result);
+      try {
+        const result = await categoryCollection.insertOne(category);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ error: "Failed to add category" });
+      }
     });
 
-    // Update a category by ID
     app.put("/categories/:id", async (req, res) => {
       const id = req.params.id;
       const category = req.body;
       const filter = { _id: ObjectId(id) };
       const updateDoc = { $set: category };
-      const result = await categoryCollection.updateOne(filter, updateDoc);
-      res.send(result);
+
+      try {
+        const result = await categoryCollection.updateOne(filter, updateDoc);
+        if (result.modifiedCount > 0) {
+          res.send(result);
+        } else {
+          res.status(404).send({ error: "Category not found" });
+        }
+      } catch (error) {
+        res.status(500).send({ error: "Failed to update category" });
+      }
     });
 
-    // Delete a category by ID
     app.delete("/categories/:id", async (req, res) => {
       const id = req.params.id;
-      const result = await categoryCollection.deleteOne({ _id: ObjectId(id) });
-      res.send(result);
+      try {
+        const result = await categoryCollection.deleteOne({ _id: ObjectId(id) });
+        if (result.deletedCount > 0) {
+          res.send(result);
+        } else {
+          res.status(404).send({ error: "Category not found" });
+        }
+      } catch (error) {
+        res.status(500).send({ error: "Failed to delete category" });
+      }
     });
 
-    // Payment part 
-
-    // Create a Payment Intent
+    // Routes for payments
     app.post("/create-payment-intent", async (req, res) => {
       const { amount } = req.body;
 
@@ -185,7 +218,6 @@ const run = async () => {
       }
     });
 
-    // Save payment information
     app.post("/save-payment-info", async (req, res) => {
       const paymentInfo = req.body;
 
@@ -197,7 +229,6 @@ const run = async () => {
       }
     });
 
-    // Get user list who have made payments
     app.get("/users-who-paid", async (req, res) => {
       try {
         const users = await paymentCollection
@@ -212,7 +243,7 @@ const run = async () => {
             },
             {
               $lookup: {
-                from: "users", // user information is stored in a collection named 'users'
+                from: "users", // Assuming user information is stored in a collection named 'users'
                 localField: "_id",
                 foreignField: "_id",
                 as: "userDetails",
@@ -241,12 +272,14 @@ const run = async () => {
       }
     });
 
+  } catch (error) {
+    console.error("Failed to connect to MongoDB", error);
   } finally {
-    // Do nothing here, or close the connection if needed
+    // Close the connection if needed
   }
 };
 
-run().catch((err) => console.log(err));
+run().catch((err) => console.log("Error in server run", err));
 
 app.get("/", (req, res) => {
   res.send("Hello From Fatihas Floral Fantasy - Online Nursery Website Server");
