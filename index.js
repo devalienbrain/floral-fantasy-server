@@ -189,7 +189,9 @@ const run = async () => {
     app.delete("/categories/:id", async (req, res) => {
       const id = req.params.id;
       try {
-        const result = await categoryCollection.deleteOne({ _id: ObjectId(id) });
+        const result = await categoryCollection.deleteOne({
+          _id: ObjectId(id),
+        });
         if (result.deletedCount > 0) {
           res.send(result);
         } else {
@@ -203,7 +205,7 @@ const run = async () => {
     // Routes for payments
     app.post("/create-payment-intent", async (req, res) => {
       const { amount } = req.body;
-
+      console.log(amount);
       try {
         const paymentIntent = await stripe.paymentIntents.create({
           amount: amount * 100, // amount in cents
@@ -220,7 +222,7 @@ const run = async () => {
 
     app.post("/save-payment-info", async (req, res) => {
       const paymentInfo = req.body;
-
+      console.log(paymentInfo);
       try {
         const result = await paymentCollection.insertOne(paymentInfo);
         res.send(result);
@@ -231,47 +233,35 @@ const run = async () => {
 
     app.get("/users-who-paid", async (req, res) => {
       try {
-        const users = await paymentCollection
+        const payments = await paymentCollection
           .aggregate([
             {
               $group: {
-                _id: "$userId",
+                _id: "$name",
                 totalAmount: { $sum: "$amount" },
                 paymentCount: { $sum: 1 },
-                lastPaymentDate: { $max: "$createdAt" },
+                lastPaymentDate: { $max: "$date" },
               },
-            },
-            {
-              $lookup: {
-                from: "users", // Assuming user information is stored in a collection named 'users'
-                localField: "_id",
-                foreignField: "_id",
-                as: "userDetails",
-              },
-            },
-            {
-              $unwind: "$userDetails",
             },
             {
               $project: {
                 _id: 0,
-                userId: "$_id",
+                name: "$_id",
                 totalAmount: 1,
                 paymentCount: 1,
                 lastPaymentDate: 1,
-                "userDetails.name": 1,
-                "userDetails.email": 1,
               },
             },
           ])
           .toArray();
 
-        res.send(users);
+        console.log("Aggregated Payments:", payments); // Log the aggregated payments
+        res.send(payments);
       } catch (error) {
-        res.status(500).send({ error: "Failed to fetch users who made payments" });
+        console.error("Failed to fetch payment history", error); // Log errors
+        res.status(500).send({ error: "Failed to fetch payment history" });
       }
     });
-
   } catch (error) {
     console.error("Failed to connect to MongoDB", error);
   } finally {
