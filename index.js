@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -14,7 +15,10 @@ const uri = `mongodb+srv://hassansabbir0321:${process.env.PASSWORD}@cluster0.it4
 const client = new MongoClient(uri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  serverApi: ServerApiVersion.v1,
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+  },
 });
 
 const run = async () => {
@@ -23,7 +27,12 @@ const run = async () => {
     const db = client.db("fatihas-floral-fantasy");
     const productCollection = db.collection("products");
     const categoryCollection = db.collection("categories");
+    const paymentCollection = db.collection("payments");
 
+
+    // Routes for products, categories and payment
+
+    // Payment part
     // Get all products with optional filtering, pagination, and sorting
     app.get("/products", async (req, res) => {
       const {
@@ -81,7 +90,7 @@ const run = async () => {
       res.send(result);
     });
 
-    //  Update a product by Id
+    // Update a product by Id
     app.put("/products/:id", async (req, res) => {
       const id = req.params.id;
       const product = req.body;
@@ -106,6 +115,8 @@ const run = async () => {
       const result = await productCollection.deleteOne({ _id: ObjectId(id) });
       res.send(result);
     });
+
+    // Category part
 
     // Get all categories with product count
     app.get("/categories", async (req, res) => {
@@ -153,6 +164,83 @@ const run = async () => {
       const result = await categoryCollection.deleteOne({ _id: ObjectId(id) });
       res.send(result);
     });
+
+    // Payment part 
+
+    // Create a Payment Intent
+    app.post("/create-payment-intent", async (req, res) => {
+      const { amount } = req.body;
+
+      try {
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: amount * 100, // amount in cents
+          currency: "usd",
+        });
+
+        res.send({
+          clientSecret: paymentIntent.client_secret,
+        });
+      } catch (error) {
+        res.status(500).send({ error: error.message });
+      }
+    });
+
+    // Save payment information
+    app.post("/save-payment-info", async (req, res) => {
+      const paymentInfo = req.body;
+
+      try {
+        const result = await paymentCollection.insertOne(paymentInfo);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ error: "Failed to save payment information" });
+      }
+    });
+
+    // Get user list who have made payments
+    app.get("/users-who-paid", async (req, res) => {
+      try {
+        const users = await paymentCollection
+          .aggregate([
+            {
+              $group: {
+                _id: "$userId",
+                totalAmount: { $sum: "$amount" },
+                paymentCount: { $sum: 1 },
+                lastPaymentDate: { $max: "$createdAt" },
+              },
+            },
+            {
+              $lookup: {
+                from: "users", // user information is stored in a collection named 'users'
+                localField: "_id",
+                foreignField: "_id",
+                as: "userDetails",
+              },
+            },
+            {
+              $unwind: "$userDetails",
+            },
+            {
+              $project: {
+                _id: 0,
+                userId: "$_id",
+                totalAmount: 1,
+                paymentCount: 1,
+                lastPaymentDate: 1,
+                "userDetails.name": 1,
+                "userDetails.email": 1,
+              },
+            },
+          ])
+          .toArray();
+
+        res.send(users);
+      } catch (error) {
+        res.status(500).send({ error: "Failed to fetch users who made payments" });
+      }
+    });
+
   } finally {
     // Do nothing here, or close the connection if needed
   }
