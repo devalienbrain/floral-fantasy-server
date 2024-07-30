@@ -97,6 +97,7 @@ const run = async () => {
       }
     });
 
+
     app.put("/products/:id", async (req, res) => {
       const id = req.params.id;
       const product = req.body;
@@ -116,6 +117,7 @@ const run = async () => {
         res.status(500).send({ error: "Failed to update product" });
       }
     });
+
 
     app.delete("/products/:id", async (req, res) => {
       const id = req.params.id;
@@ -266,7 +268,7 @@ const run = async () => {
     app.post("/clear-cart", async (req, res) => {
       try {
         // Logic to clear all cart items
-        await productCollection.updateMany({}, { $set: { addedToCart: false } }); 
+        await productCollection.updateMany({}, { $set: { addedToCart: false } });
         res.status(200).json({ message: "Cart cleared successfully" });
       } catch (error) {
         console.error("Error clearing cart:", error);
