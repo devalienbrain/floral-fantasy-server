@@ -210,7 +210,7 @@ const run = async () => {
       // console.log(amount);
       try {
         const paymentIntent = await stripe.paymentIntents.create({
-          amount: amount * 100, // amount in cents
+          amount: amount * 100,
           currency: "usd",
         });
 
@@ -257,17 +257,17 @@ const run = async () => {
           ])
           .toArray();
 
-        console.log("Aggregated Payments:", payments); // Log the aggregated payments
+        // console.log(payments);
         res.send(payments);
       } catch (error) {
-        console.error("Failed to fetch payment history", error); // Log errors
+        console.error("Failed to fetch payment history", error);
         res.status(500).send({ error: "Failed to fetch payment history" });
       }
     });
-
+    // After successful payment clear all cart items
     app.post("/clear-cart", async (req, res) => {
       try {
-        // Logic to clear all cart items
+
         await productCollection.updateMany({}, { $set: { addedToCart: false } });
         res.status(200).json({ message: "Cart cleared successfully" });
       } catch (error) {
