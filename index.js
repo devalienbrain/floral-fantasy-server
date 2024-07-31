@@ -10,11 +10,11 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-const uri = `mongodb+srv://hassansabbir0321:${process.env.PASSWORD}@cluster0.it45qfo.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+const uri = `mongodb+srv://${process.env.USER_NAME}:${process.env.PASSWORD}@cluster0.it45qfo.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 const client = new MongoClient(uri, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
+  // useNewUrlParser: true,
+  // useUnifiedTopology: true,
   serverApi: {
     version: ServerApiVersion.v1,
     strict: true,
@@ -97,7 +97,6 @@ const run = async () => {
       }
     });
 
-
     app.put("/products/:id", async (req, res) => {
       const id = req.params.id;
       const product = req.body;
@@ -117,7 +116,6 @@ const run = async () => {
         res.status(500).send({ error: "Failed to update product" });
       }
     });
-
 
     app.delete("/products/:id", async (req, res) => {
       const id = req.params.id;
@@ -267,8 +265,10 @@ const run = async () => {
     // After successful payment clear all cart items
     app.post("/clear-cart", async (req, res) => {
       try {
-
-        await productCollection.updateMany({}, { $set: { addedToCart: false } });
+        await productCollection.updateMany(
+          {},
+          { $set: { addedToCart: false } }
+        );
         res.status(200).json({ message: "Cart cleared successfully" });
       } catch (error) {
         console.error("Error clearing cart:", error);

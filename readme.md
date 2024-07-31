@@ -3,8 +3,9 @@
 
 #Nodejs + ExpressJS + MongoDB Atlas
 
-Client side code link: https://github.com/devalienbrain/floral-fantasy-client
-Live deploy (vercel) link:  
+#Live deploy (vercel) link: https://floral-fantasy-server-x.vercel.app/  
+
+#Client side code link: https://github.com/devalienbrain/floral-fantasy-client
 
 ## Follow the Instructions to Run the Application/Project Locally
 
@@ -35,6 +36,7 @@ Live deploy (vercel) link:
 
    ```sh
    PORT = <port_number>
+   USER_NAME = <user name>
    PASSWORD = <password>
    STRIPE_SECRET_KEY = <secret key>  
 
