@@ -3,7 +3,7 @@
 
 #Nodejs + ExpressJS + MongoDB Atlas
 
-#Live deploy (vercel) link: https://floral-fantasy-server-x.vercel.app/  
+#Live deploy (vercel) link: https://floral-fantasy-server.vercel.app/  
 
 #Client side code link: https://github.com/devalienbrain/floral-fantasy-client
 

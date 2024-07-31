@@ -8,6 +8,10 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 app.use(cors());
+cors({
+  origin: ["http://localhost:5173"],
+  // credentials: true,
+});
 app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.USER_NAME}:${process.env.PASSWORD}@cluster0.it45qfo.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -23,7 +27,7 @@ const client = new MongoClient(uri, {
 
 const run = async () => {
   try {
-    await client.connect();
+    // await client.connect();
     const db = client.db("fatihas-floral-fantasy");
     const productCollection = db.collection("products");
     const categoryCollection = db.collection("categories");
